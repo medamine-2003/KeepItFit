@@ -1,0 +1,60 @@
+# backend/docker-compose.yml
+# File path: backend/docker-compose.yml
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: techheal_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d techheal_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: quay.io/minio/minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: 12345678
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/techheal_db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: 12345678
+      MINIO_BUCKET: uploads
+      MINIO_PUBLIC_ENDPOINT: 192.168.1.122:9000
+      JWT_SECRET: 9f8e3a2c7d1b5e6f0a4c9b8d7e6f5a3c2b1d0e9f8a7c6b5d4e3f2a1c0b9e8d7f6
+      OPENAI_API_KEY: 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
+      DEEPSEEK_API_KEY: sk-facde3485758431f80b439ff697d8aed
+      GEMINI_API_KEY: AIzaSyB4raoEEQ8DD1Kipr80TguiU6cqNaVO7uU
+      OLLAMA_API_KEY: d73c0dfb048b4e908c8b796a5770262d.r_BeDaSIVb8sVPgRhFCPGwyp
+      OLLAMA_BASE_URL: https://api.ollama.ai/v1
+
+volumes:
+  postgres_data:
+  minio_data:
